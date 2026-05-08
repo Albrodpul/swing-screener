@@ -1,6 +1,9 @@
 name: Pipeline diario
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     # Lunes a viernes a las 21:30 UTC (5:30 PM hora Nueva York, tras cierre)
     - cron: '30 21 * * 1-5'
