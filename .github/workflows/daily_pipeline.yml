@@ -59,3 +59,9 @@ jobs:
           git diff --staged --quiet && echo "Sin cambios" || \
             git commit -m "data: pipeline $(date -u +%Y-%m-%d)" && \
             git pull --rebase origin main && git push
+
+      - name: Notificar Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python notify.py

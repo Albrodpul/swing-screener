@@ -17,6 +17,9 @@ import plotly.graph_objects as go
 
 from screener.pipeline import run_pipeline
 from screener.plain_language import humanize_card, SIGNAL_SHORT
+from screener.portfolio import (
+    load_portfolio, add_ticker, remove_ticker, portfolio_enabled
+)
 from data.fetch_prices import get_prices
 from technicals.indicators import sma, atr
 from technicals.breakout import detect_breakout
@@ -88,6 +91,30 @@ sectors_all = sorted(df["sector"].dropna().unique().tolist())
 sectors_sel = st.sidebar.multiselect("Sector", sectors_all, default=sectors_all)
 
 search = st.sidebar.text_input("Buscar (ticker o nombre)", "").strip()
+
+st.sidebar.divider()
+
+# ── Cartera ────────────────────────────────────────────────────────────────
+if portfolio_enabled():
+    portfolio_data = load_portfolio()
+    holdings = set(portfolio_data.get("holdings", {}).keys())
+
+    st.sidebar.subheader("💼 Mi cartera")
+    if holdings:
+        SIG_COLOR = {"COMPRA": "🟢", "OBSERVAR": "👀", "SALIDA": "🔴",
+                     "EVITAR": "⚠️", "INELIGIBLE": "⚫"}
+        for tk in sorted(holdings):
+            row = df[df["ticker"] == tk]
+            if not row.empty:
+                sig = row.iloc[0]["signal"]
+                emoji = SIG_COLOR.get(sig, "❓")
+                st.sidebar.markdown(f"{emoji} **{tk}** — {sig}")
+            else:
+                st.sidebar.markdown(f"❓ **{tk}** — sin datos")
+    else:
+        st.sidebar.caption("Ninguna acción marcada aún. Usa los botones en las tarjetas.")
+else:
+    holdings = set()
 
 st.sidebar.divider()
 st.sidebar.markdown(
@@ -168,16 +195,31 @@ for _, row in shown.head(50).iterrows():
     fcolor = fuerza_color(fuerza)
 
     with st.container(border=True):
-        head1, head2 = st.columns([3, 2])
+        ticker = c["ticker"]
+        in_portfolio = ticker in holdings
+        head1, head2, head3 = st.columns([3, 1, 2])
         with head1:
             name = row.get("name") if "name" in row.index else None
-            title = f"### {c['emoji']} **{c['ticker']}**"
-            if name and name != c['ticker']:
+            badge = " 💼" if in_portfolio else ""
+            title = f"### {c['emoji']} **{ticker}**{badge}"
+            if name and name != ticker:
                 title += f" · {name}"
             title += f" — {c['label']}"
             st.markdown(title)
             st.caption(f"{c['sector']}  ·  Precio: {c['precio']:.2f} $" if c['precio'] else c['sector'])
         with head2:
+            if portfolio_enabled():
+                if in_portfolio:
+                    if st.button("💼 En cartera", key=f"port_{ticker}", type="primary",
+                                 use_container_width=True, help="Pulsa para quitar de cartera"):
+                        remove_ticker(ticker)
+                        st.rerun()
+                else:
+                    if st.button("＋ Añadir", key=f"port_{ticker}",
+                                 use_container_width=True, help="Añadir a mi cartera"):
+                        add_ticker(ticker)
+                        st.rerun()
+        with head3:
             if fuerza is not None:
                 st.markdown(
                     f"<div style='text-align:right'>"
