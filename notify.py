@@ -22,8 +22,8 @@ if str(ROOT) not in sys.path:
 
 BOT_TOKEN  = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID    = os.environ.get("TELEGRAM_CHAT_ID", "")
-GH_TOKEN   = os.environ.get("GITHUB_TOKEN", "")
-GH_REPO    = os.environ.get("GITHUB_REPOSITORY", "")
+GH_TOKEN   = os.environ.get("GH_TOKEN", "")
+GH_REPO    = os.environ.get("GH_REPOSITORY", "")
 
 SIG_EMOJI = {"COMPRA": "🟢", "OBSERVAR": "👀", "SALIDA": "🔴",
              "EVITAR": "⚠️", "INELIGIBLE": "⚫"}
