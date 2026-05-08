@@ -1,0 +1,58 @@
+# Copia este fichero a config.yaml y rellena tus claves.
+# config.yaml NO se debe versionar (está en .gitignore).
+
+api_keys:
+  fmp: ""   # opcional — déjalo vacío para usar solo yfinance
+
+universe:
+  include:
+    - sp500
+    - nasdaq100
+  extra:
+    # IPOs recientes
+    - SNDK
+    # ADRs/no-S&P500 líderes IA y semiconductores
+    - TSM       # TSMC
+    - ASML      # ASML Holding
+    - ARM       # ARM Holdings
+    - SE        # Sea Limited
+    - SHOP      # Shopify
+    - SPOT      # Spotify
+    # ADRs grandes consumer/farma
+    - NVO       # Novo Nordisk
+    - BABA      # Alibaba
+    - BIDU      # Baidu
+    - JD        # JD.com
+    - PDD       # PDD Holdings
+    - TM        # Toyota
+    # Otras de moda
+    - HOOD      # Robinhood
+    - RBLX      # Roblox
+    - DKNG      # DraftKings
+    - DASH      # DoorDash
+  exclude: []
+
+cache:
+  dir: "cache"
+  prices_max_age_hours: 20
+  fundamentals_max_age_hours: 168
+
+screening:
+  weights:
+    qv: 0.40
+    fi: 0.35
+    theme: 0.25
+  thresholds:
+    rs_rating_min: 80
+    not_extended_max_pct: 0.25
+    breakout_volume_mult: 1.4
+    distribution_days_market: 5
+    distribution_days_window: 25
+    chandelier_atr_mult: 3.0
+    rs_rolling_over_days: 5
+  piotroski_min: 5
+
+output:
+  language: "es"
+  top_n_buy: 10
+  top_n_exit_watch: 20

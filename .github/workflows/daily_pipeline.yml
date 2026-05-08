@@ -1,0 +1,57 @@
+name: Pipeline diario
+
+on:
+  schedule:
+    # Lunes a viernes a las 21:30 UTC (5:30 PM hora Nueva York, tras cierre)
+    - cron: '30 21 * * 1-5'
+  workflow_dispatch:   # permite lanzarlo a mano desde GitHub
+
+permissions:
+  contents: write      # necesario para hacer commit del parquet
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Cache datos screener
+        uses: actions/cache@v4
+        with:
+          path: cache/
+          key: screener-data-${{ github.run_id }}
+          restore-keys: |
+            screener-data-
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Crear config.yaml
+        run: cp config.yaml.example config.yaml
+
+      - name: Ejecutar pipeline
+        run: python ci_pipeline.py
+
+      - name: Commit resultado
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/last_run.parquet
+          git diff --staged --quiet && echo "Sin cambios" || \
+            git commit -m "data: pipeline $(date -u +%Y-%m-%d)" && git push

@@ -1,0 +1,10 @@
+config.yaml
+cache/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.parquet
+!data/last_run.parquet
+.env
+.venv/
+venv/
