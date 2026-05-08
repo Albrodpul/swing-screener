@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 
-const GH_PAT  = process.env.GITHUB_PAT  ?? ''
-const GH_REPO = process.env.GITHUB_REPO ?? ''
+const GH_PAT  = process.env.GH_PAT  ?? ''
+const GH_REPO = process.env.GH_REPO ?? ''
 const FILE    = 'data/portfolio.json'
 const API_URL = `https://api.github.com/repos/${GH_REPO}/contents/${FILE}`
 

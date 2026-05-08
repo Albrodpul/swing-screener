@@ -8,5 +8,4 @@ PyYAML>=6.0.1
 tqdm>=4.66.0
 tenacity>=8.2.0
 lxml>=5.0.0
-streamlit>=1.50.0
 plotly>=6.0.0
