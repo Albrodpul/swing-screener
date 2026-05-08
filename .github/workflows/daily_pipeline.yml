@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'data/portfolio.json'
   schedule:
     # Lunes a viernes a las 21:30 UTC (5:30 PM hora Nueva York, tras cierre)
     - cron: '30 21 * * 1-5'
@@ -51,11 +53,14 @@ jobs:
       - name: Ejecutar pipeline
         run: python ci_pipeline.py
 
+      - name: Generar JSON para frontend
+        run: python generate_json.py
+
       - name: Commit resultado
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/last_run.parquet
+          git add data/last_run.parquet web/public/last_run.json
           git diff --staged --quiet && echo "Sin cambios" || \
             git commit -m "data: pipeline $(date -u +%Y-%m-%d)" && \
             git pull --rebase origin main && git push

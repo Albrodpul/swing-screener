@@ -5,7 +5,11 @@ __pycache__/
 .ipynb_checkpoints/
 *.parquet
 !data/last_run.parquet
+web/node_modules/
+web/.next/
+web/.env.local
 .env
 .venv/
 venv/
 .claude/
+references/

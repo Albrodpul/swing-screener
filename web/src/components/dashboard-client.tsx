@@ -1,0 +1,120 @@
+'use client'
+import { useState, useMemo, useEffect } from 'react'
+import { Search } from 'lucide-react'
+import type { ScreenerData } from '@/lib/types'
+import { StockCard } from './stock-card'
+import { SignalPills } from './signal-pills'
+
+const SIG_MAP: Record<string, string[]> = {
+  COMPRA:  ['COMPRA'],
+  OBSERVAR: ['OBSERVAR'],
+  SALIDA:  ['SALIDA'],
+  SALTAR:  ['EVITAR', 'INELIGIBLE'],
+  TODO:    ['COMPRA', 'OBSERVAR', 'SALIDA', 'EVITAR', 'INELIGIBLE'],
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+export function DashboardClient({ data }: { data: ScreenerData | null }) {
+  const [signal, setSignal] = useState('OBSERVAR')
+  const [search, setSearch] = useState('')
+
+  const counts = useMemo(() => {
+    if (!data) return {}
+    return {
+      COMPRA:  data.stocks.filter(s => s.signal === 'COMPRA').length,
+      OBSERVAR: data.stocks.filter(s => s.signal === 'OBSERVAR').length,
+      SALIDA:  data.stocks.filter(s => s.signal === 'SALIDA').length,
+      SALTAR:  data.stocks.filter(s => ['EVITAR', 'INELIGIBLE'].includes(s.signal)).length,
+    }
+  }, [data])
+
+  // Default to COMPRA if there are any buys
+  useEffect(() => {
+    if (data && counts.COMPRA && counts.COMPRA > 0) setSignal('COMPRA')
+  }, [data, counts.COMPRA])
+
+  const filtered = useMemo(() => {
+    if (!data) return []
+    const sigs = SIG_MAP[signal] ?? SIG_MAP.TODO
+    let stocks = data.stocks.filter(s => sigs.includes(s.signal))
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      stocks = stocks.filter(s =>
+        s.ticker.toLowerCase().includes(q) ||
+        (s.name ?? '').toLowerCase().includes(q) ||
+        (s.sector ?? '').toLowerCase().includes(q)
+      )
+    }
+    return stocks
+      .sort((a, b) =>
+        ((b.rs_rating ?? 0) + (b.fund_composite ?? 0)) -
+        ((a.rs_rating ?? 0) + (a.fund_composite ?? 0))
+      )
+      .slice(0, 50)
+  }, [data, signal, search])
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-6">
+
+      {/* Page header */}
+      <div className="mb-5">
+        <h1 className="text-2xl font-black text-white mb-0.5">📈 Screener</h1>
+        {data ? (
+          <p className="text-sm text-slate-500">
+            Actualizado: {formatDate(data.updated_at)} · {data.count} empresas
+          </p>
+        ) : (
+          <p className="text-sm text-slate-500">Sin datos — pipeline no ejecutado aún</p>
+        )}
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={16} />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar empresa o ticker..."
+          className="w-full pl-10 pr-4 py-2.5 bg-[#132033] border border-[#1e3a52] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#2d7eb5] focus:ring-2 focus:ring-[#2d7eb5]/20 transition-colors"
+        />
+      </div>
+
+      {/* Signal filter */}
+      <SignalPills selected={signal} onSelect={setSignal} counts={counts} />
+
+      {/* Result count */}
+      <p className="text-xs text-slate-500 my-3">
+        {filtered.length} empresa{filtered.length !== 1 ? 's' : ''}
+        {search.trim() && ` · buscando "${search.trim()}"`}
+      </p>
+
+      {/* Cards */}
+      {filtered.map(stock => (
+        <StockCard key={stock.ticker} stock={stock} />
+      ))}
+
+      {filtered.length === 0 && data && (
+        <div className="text-center py-16 text-slate-500">
+          <div className="text-4xl mb-3">🔍</div>
+          <p className="font-semibold">Sin resultados</p>
+          <p className="text-sm mt-1">Prueba con otro filtro o borra la búsqueda</p>
+        </div>
+      )}
+
+      {!data && (
+        <div className="text-center py-16 text-slate-500">
+          <div className="text-4xl mb-3">📊</div>
+          <p className="font-semibold">Sin datos disponibles</p>
+          <p className="text-sm mt-1">El pipeline se ejecuta los días de mercado (lun–vie)</p>
+        </div>
+      )}
+
+      {/* Bottom padding for mobile nav */}
+      <div className="h-4 md:h-0" />
+    </div>
+  )
+}
