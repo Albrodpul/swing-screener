@@ -20,11 +20,14 @@ def _safe(v):
         return None
     if isinstance(v, float) and math.isnan(v):
         return None
+    if hasattr(v, "tolist"):
+        result = v.tolist()
+        if isinstance(result, list):
+            return [str(x) for x in result]
+        return None if (isinstance(result, float) and math.isnan(result)) else result
     if hasattr(v, "item"):
         val = v.item()
         return None if (isinstance(val, float) and math.isnan(val)) else val
-    if hasattr(v, "tolist"):
-        return [str(x) for x in v.tolist()]
     if isinstance(v, list):
         return [str(x) for x in v]
     return v
