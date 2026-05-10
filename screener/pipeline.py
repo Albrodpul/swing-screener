@@ -41,7 +41,7 @@ from themes.sector_rotation import (
 from screener.interlock import decide_signal, composite_fundamental  # noqa: E402
 
 
-def _load_fundamentals(tickers: list[str], mode: str = "auto", verbose: bool = True, max_workers: int = 12) -> dict[str, dict]:
+def _load_fundamentals(tickers: list[str], mode: str = "auto", verbose: bool = True, max_workers: int = 4) -> dict[str, dict]:
     from concurrent.futures import ThreadPoolExecutor, as_completed
     out: dict[str, dict] = {}
 
