@@ -74,23 +74,35 @@ def get_prices(ticker: str, force_refresh: bool = False,
 
 
 def get_prices_batch(tickers: list[str], force_refresh: bool = False,
-                     verbose: bool = True) -> dict[str, pd.DataFrame]:
+                     verbose: bool = True, max_workers: int = 12) -> dict[str, pd.DataFrame]:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     out: dict[str, pd.DataFrame] = {}
     failures: list[str] = []
-    iterator = tickers
-    if verbose:
-        try:
-            from tqdm import tqdm
-            iterator = tqdm(tickers, desc="Precios")
-        except Exception:
-            pass
-    for tk in iterator:
-        try:
-            out[tk] = get_prices(tk, force_refresh=force_refresh)
-        except Exception:
-            failures.append(tk)
-        # pequeño respiro para no bombardear yahoo
-        time.sleep(0.05)
+
+    def _fetch(tk: str) -> tuple[str, pd.DataFrame]:
+        return tk, get_prices(tk, force_refresh=force_refresh)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_fetch, tk): tk for tk in tickers}
+        pbar = None
+        if verbose:
+            try:
+                from tqdm import tqdm
+                pbar = tqdm(total=len(tickers), desc="Precios")
+            except Exception:
+                pass
+        for future in as_completed(futures):
+            tk = futures[future]
+            try:
+                _, df = future.result()
+                out[tk] = df
+            except Exception:
+                failures.append(tk)
+            if pbar:
+                pbar.update(1)
+        if pbar:
+            pbar.close()
+
     if verbose and failures:
         print(f"Sin datos para {len(failures)} tickers: {failures[:10]}{'...' if len(failures) > 10 else ''}")
     return out

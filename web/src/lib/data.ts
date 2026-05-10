@@ -1,19 +1,13 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import type { ScreenerData } from './types'
 
-function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return 'http://localhost:3000'
-}
-
-export async function fetchScreenerData(): Promise<ScreenerData | null> {
+export function fetchScreenerData(): ScreenerData {
   try {
-    const res = await fetch(`${getBaseUrl()}/last_run.json`, {
-      next: { revalidate: 3600 },
-    })
-    if (!res.ok) return null
-    return res.json() as Promise<ScreenerData>
+    const filePath = join(process.cwd(), 'public', 'last_run.json')
+    const content = readFileSync(filePath, 'utf-8')
+    return JSON.parse(content) as ScreenerData
   } catch {
-    return null
+    return { updated_at: '', count: 0, stocks: [] }
   }
 }
