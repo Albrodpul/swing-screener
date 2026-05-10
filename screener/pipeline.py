@@ -41,34 +41,20 @@ from themes.sector_rotation import (
 from screener.interlock import decide_signal, composite_fundamental  # noqa: E402
 
 
-def _load_fundamentals(tickers: list[str], mode: str = "auto", verbose: bool = True, max_workers: int = 4) -> dict[str, dict]:
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+def _load_fundamentals(tickers: list[str], mode: str = "auto", verbose: bool = True) -> dict[str, dict]:
     out: dict[str, dict] = {}
-
-    def _fetch(tk: str) -> tuple[str, dict]:
-        return tk, get_fundamentals(tk, mode=mode)
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(_fetch, tk): tk for tk in tickers}
-        pbar = None
-        if verbose:
-            try:
-                from tqdm import tqdm
-                pbar = tqdm(total=len(tickers), desc="Fundamentales")
-            except Exception:
-                pass
-        for future in as_completed(futures):
-            tk = futures[future]
-            try:
-                _, data = future.result()
-                out[tk] = data
-            except Exception:
-                out[tk] = {}
-            if pbar:
-                pbar.update(1)
-        if pbar:
-            pbar.close()
-
+    iterator = tickers
+    if verbose:
+        try:
+            from tqdm import tqdm
+            iterator = tqdm(tickers, desc="Fundamentales")
+        except Exception:
+            pass
+    for tk in iterator:
+        try:
+            out[tk] = get_fundamentals(tk, mode=mode)
+        except Exception:
+            out[tk] = {}
     return out
 
 
