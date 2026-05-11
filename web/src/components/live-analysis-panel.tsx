@@ -143,7 +143,7 @@ export function LiveAnalysisPanel({ onClose, initialTicker, initialMarket }: Pro
             <option value="EU">🇪🇺 EU</option>
           </select>
           <button
-            onClick={analyze}
+            onClick={() => analyze()}
             disabled={!ticker.trim()}
             className="px-4 py-2 bg-[#2d7eb5] text-white text-sm font-bold rounded-xl hover:bg-[#3a8fc7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
