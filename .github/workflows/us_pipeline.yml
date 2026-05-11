@@ -1,17 +1,6 @@
 name: Pipeline US
 
 on:
-  push:
-    paths:
-      - 'screener/**'
-      - 'data/**/*.py'
-      - 'technicals/**'
-      - 'fundamentals/**'
-      - 'themes/**'
-      - 'ci_pipeline.py'
-      - 'generate_json.py'
-      - 'requirements.txt'
-      - 'config.yaml.example'
   schedule:
     # Lunes a viernes a las 21:30 UTC (tras cierre NYSE/NASDAQ)
     - cron: '30 21 * * 1-5'

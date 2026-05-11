@@ -7,6 +7,7 @@ export interface StockData {
   signal: Signal
   sector: string | null
   industry: string | null
+  description: string | null
   rs_rating: number | null
   fund_composite: number | null
   price: number | null

@@ -75,6 +75,7 @@ def _yfinance_fundamentals(ticker: str) -> dict:
         "name": info.get("longName") or info.get("shortName"),
         "sector": info.get("sector"),
         "industry": info.get("industry"),
+        "description": (info.get("longBusinessSummary") or "")[:220].rsplit(" ", 1)[0] or None,
         "market_cap": info.get("marketCap"),
         "trailing_pe": info.get("trailingPE"),
         "forward_pe": info.get("forwardPE"),

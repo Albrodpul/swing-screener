@@ -74,6 +74,11 @@ export function StockCard({ stock, alwaysShowChart = false }: Props) {
           </div>
         </div>
 
+        {/* Company description */}
+        {stock.description && (
+          <p className="text-[0.78rem] text-slate-400 leading-relaxed mt-2 mb-1 italic">{stock.description}</p>
+        )}
+
         {/* Explanation */}
         <p className="text-sm text-slate-300 leading-relaxed my-3">{stock.explicacion}</p>
 
