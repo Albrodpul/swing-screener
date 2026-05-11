@@ -39,8 +39,8 @@ export function StockCard({ stock, alwaysShowChart = false }: Props) {
   const sigCol = SIG_COLOR[stock.signal] ?? '#6b7280'
   const fCol = fuerzaColor(stock.fuerza)
 
-  const meta = [stock.sector, stock.price != null ? `$${stock.price.toFixed(2)}` : null]
-    .filter(Boolean).join(' · ')
+  const sectorLine = [stock.sector, stock.industry].filter(Boolean).join(' → ')
+  const price = stock.price != null ? `$${stock.price.toFixed(2)}` : null
 
   return (
     <div className="bg-[#132033] border border-[#1e3a52] rounded-2xl overflow-hidden mb-2.5 transition-colors hover:bg-[#16273f] hover:border-[#2d4a6a]">
@@ -62,7 +62,8 @@ export function StockCard({ stock, alwaysShowChart = false }: Props) {
               </span>
             </div>
             <span className="text-[0.82rem] text-slate-400 leading-tight block truncate">{stock.name}</span>
-            {meta && <span className="text-[0.75rem] text-slate-500">{meta}</span>}
+            {sectorLine && <span className="text-[0.75rem] text-slate-500 block">{sectorLine}</span>}
+            {price && <span className="text-[0.75rem] text-slate-600">{price}</span>}
           </div>
           <div className="text-right flex-shrink-0 leading-tight">
             <div className="text-[0.62rem] text-slate-500 mb-0.5">Fuerza</div>

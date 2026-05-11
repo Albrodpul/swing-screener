@@ -74,6 +74,7 @@ def main() -> None:
             "name":           _safe(row.get("name")),
             "signal":         str(row["signal"]),
             "sector":         _safe(row.get("sector")),
+            "industry":       _safe(row.get("industry")),
             "rs_rating":      _safe(row.get("rs_rating")),
             "fund_composite": _safe(row.get("fund_composite")),
             "price":          price,

@@ -1,6 +1,7 @@
 name: Pipeline US
 
 on:
+  push:
     paths:
       - 'screener/**'
       - 'data/**/*.py'
