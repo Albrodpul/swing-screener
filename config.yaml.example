@@ -5,32 +5,45 @@ api_keys:
   fmp: ""   # opcional — déjalo vacío para usar solo yfinance
 
 universe:
-  include:
-    - sp500
-    - nasdaq100
-  extra:
-    # IPOs recientes
-    - SNDK
-    # ADRs/no-S&P500 líderes IA y semiconductores
-    - TSM       # TSMC
-    - ASML      # ASML Holding
-    - ARM       # ARM Holdings
-    - SE        # Sea Limited
-    - SHOP      # Shopify
-    - SPOT      # Spotify
-    # ADRs grandes consumer/farma
-    - NVO       # Novo Nordisk
-    - BABA      # Alibaba
-    - BIDU      # Baidu
-    - JD        # JD.com
-    - PDD       # PDD Holdings
-    - TM        # Toyota
-    # Otras de moda
-    - HOOD      # Robinhood
-    - RBLX      # Roblox
-    - DKNG      # DraftKings
-    - DASH      # DoorDash
-  exclude: []
+  us:
+    include:
+      - sp500
+      - nasdaq100
+      - sp400
+      - sp600
+    extra:
+      # IPOs recientes
+      - SNDK
+      # ADRs/no-S&P500 líderes IA y semiconductores
+      - TSM       # TSMC
+      - ASML      # ASML Holding (también en Euronext, pero el ADR cotiza en US)
+      - ARM       # ARM Holdings
+      - SE        # Sea Limited
+      - SHOP      # Shopify
+      - SPOT      # Spotify
+      # ADRs grandes consumer/farma
+      - NVO       # Novo Nordisk
+      - BABA      # Alibaba
+      - BIDU      # Baidu
+      - JD        # JD.com
+      - PDD       # PDD Holdings
+      - TM        # Toyota
+      # Otras
+      - HOOD      # Robinhood
+      - RBLX      # Roblox
+      - DKNG      # DraftKings
+      - DASH      # DoorDash
+      - RKLB      # Rocket Lab USA
+    exclude: []
+
+  eu:
+    include:
+      - ftse100   # 100 mayores UK (.L)
+      - dax40     # 40 mayores Alemania (.DE)
+      - cac40     # 40 mayores Francia (.PA)
+      - ibex35    # 35 mayores España (.MC)
+    extra: []
+    exclude: []
 
 cache:
   dir: "cache"

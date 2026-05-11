@@ -60,21 +60,27 @@ def _load_fundamentals(tickers: list[str], mode: str = "auto", verbose: bool = T
 
 def run_pipeline(tickers: list[str] | None = None,
                  fund_mode: str = "auto",
-                 verbose: bool = True) -> pd.DataFrame:
+                 verbose: bool = True,
+                 market: str = "US",
+                 spy_ticker: str = "SPY",
+                 qqq_ticker: str | None = "QQQ") -> pd.DataFrame:
     cfg = load_config()
     universe = tickers if tickers else build_universe()
     if verbose:
-        print(f"Universo: {len(universe)} tickers")
+        print(f"Universo [{market}]: {len(universe)} tickers")
 
-    # Tickers de benchmarks/ETFs sectoriales
-    bench_tickers = ["SPY", "QQQ"] + list(ALL_SECTOR_ETFS)
+    if market == "US":
+        bench_tickers = [spy_ticker, qqq_ticker] + list(ALL_SECTOR_ETFS) if qqq_ticker else [spy_ticker] + list(ALL_SECTOR_ETFS)
+    else:
+        bench_tickers = [spy_ticker] + ([qqq_ticker] if qqq_ticker else [])
+    bench_tickers = [t for t in bench_tickers if t]
     all_tickers = sorted(set(universe) | set(bench_tickers))
 
     # 1. Precios
     price_map = get_prices_batch(all_tickers, verbose=verbose)
 
-    # 2. Sector RS
-    sector_rs = compute_sector_rs(price_map)
+    # 2. Sector RS (solo US)
+    sector_rs = compute_sector_rs(price_map) if market == "US" else {}
 
     # 3. RS rating cross-sectional sobre universo (no incluir ETFs)
     universe_in_data = [t for t in universe if t in price_map]
@@ -90,8 +96,8 @@ def run_pipeline(tickers: list[str] | None = None,
     f_df = compute_f_score_universe(funds)
     theme_map = assign_theme_score(funds, sector_rs)
 
-    spy = price_map.get("SPY")
-    qqq = price_map.get("QQQ")
+    spy = price_map.get(spy_ticker)
+    qqq = price_map.get(qqq_ticker) if qqq_ticker else None
 
     rows = []
     iterator = universe_in_data
@@ -116,7 +122,7 @@ def run_pipeline(tickers: list[str] | None = None,
         rsl = rs_line_state(prices["close"], spy["close"]) if spy is not None else {}
 
         sector = (funds.get(tk) or {}).get("sector")
-        sector_etf = get_sector_etf(sector)
+        sector_etf = get_sector_etf(sector) if market == "US" else None
         sector_etf_prices = price_map.get(sector_etf) if sector_etf else None
         exits = aggregate_exit(prices, spy, qqq, sector_etf_prices)
 
@@ -140,6 +146,7 @@ def run_pipeline(tickers: list[str] | None = None,
 
         rows.append({
             "ticker": tk,
+            "market": market,
             "name": (funds.get(tk) or {}).get("name") or names_map.get(tk) or tk,
             "sector": sector,
             "sector_etf": theme.get("sector_etf"),

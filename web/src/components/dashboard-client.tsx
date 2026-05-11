@@ -13,6 +13,12 @@ const SIG_MAP: Record<string, string[]> = {
   TODO:    ['COMPRA', 'OBSERVAR', 'SALIDA', 'EVITAR', 'INELIGIBLE'],
 }
 
+const MARKET_TABS = [
+  { key: 'ALL', label: '🌍 Todos' },
+  { key: 'US',  label: '🇺🇸 US' },
+  { key: 'EU',  label: '🇪🇺 EU' },
+]
+
 function formatDate(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -20,27 +26,29 @@ function formatDate(iso: string): string {
 
 export function DashboardClient({ data }: { data: ScreenerData | null }) {
   const [signal, setSignal] = useState('OBSERVAR')
+  const [market, setMarket] = useState('ALL')
   const [search, setSearch] = useState('')
 
   const counts = useMemo(() => {
     if (!data) return {}
+    const src = market === 'ALL' ? data.stocks : data.stocks.filter(s => s.market === market)
     return {
-      COMPRA:  data.stocks.filter(s => s.signal === 'COMPRA').length,
-      OBSERVAR: data.stocks.filter(s => s.signal === 'OBSERVAR').length,
-      SALIDA:  data.stocks.filter(s => s.signal === 'SALIDA').length,
-      SALTAR:  data.stocks.filter(s => ['EVITAR', 'INELIGIBLE'].includes(s.signal)).length,
+      COMPRA:  src.filter(s => s.signal === 'COMPRA').length,
+      OBSERVAR: src.filter(s => s.signal === 'OBSERVAR').length,
+      SALIDA:  src.filter(s => s.signal === 'SALIDA').length,
+      SALTAR:  src.filter(s => ['EVITAR', 'INELIGIBLE'].includes(s.signal)).length,
     }
-  }, [data])
+  }, [data, market])
 
-  // Default to COMPRA if there are any buys
   useEffect(() => {
     if (data && counts.COMPRA && counts.COMPRA > 0) setSignal('COMPRA')
   }, [data, counts.COMPRA])
 
   const filtered = useMemo(() => {
     if (!data) return []
+    let stocks = market === 'ALL' ? data.stocks : data.stocks.filter(s => s.market === market)
     const sigs = SIG_MAP[signal] ?? SIG_MAP.TODO
-    let stocks = data.stocks.filter(s => sigs.includes(s.signal))
+    stocks = stocks.filter(s => sigs.includes(s.signal))
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       stocks = stocks.filter(s =>
@@ -55,7 +63,15 @@ export function DashboardClient({ data }: { data: ScreenerData | null }) {
         ((a.rs_rating ?? 0) + (a.fund_composite ?? 0))
       )
       .slice(0, 50)
-  }, [data, signal, search])
+  }, [data, signal, market, search])
+
+  const marketCounts = useMemo(() => {
+    if (!data) return { US: 0, EU: 0 }
+    return {
+      US: data.stocks.filter(s => s.market === 'US').length,
+      EU: data.stocks.filter(s => s.market === 'EU').length,
+    }
+  }, [data])
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
@@ -70,6 +86,29 @@ export function DashboardClient({ data }: { data: ScreenerData | null }) {
         ) : (
           <p className="text-sm text-slate-500">Sin datos — pipeline no ejecutado aún</p>
         )}
+      </div>
+
+      {/* Market tabs */}
+      <div className="flex gap-2 mb-4">
+        {MARKET_TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setMarket(tab.key)}
+            className={[
+              'px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+              market === tab.key
+                ? 'bg-[#2d7eb5] text-white'
+                : 'bg-[#132033] text-slate-400 hover:text-white border border-[#1e3a52]',
+            ].join(' ')}
+          >
+            {tab.label}
+            {tab.key !== 'ALL' && data && (
+              <span className="ml-1.5 text-xs opacity-70">
+                {marketCounts[tab.key as 'US' | 'EU']}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Search */}
@@ -113,7 +152,6 @@ export function DashboardClient({ data }: { data: ScreenerData | null }) {
         </div>
       )}
 
-      {/* Bottom padding for mobile nav */}
       <div className="h-4 md:h-0" />
     </div>
   )

@@ -2,6 +2,7 @@ export type Signal = 'COMPRA' | 'OBSERVAR' | 'SALIDA' | 'EVITAR' | 'INELIGIBLE'
 
 export interface StockData {
   ticker: string
+  market: 'US' | 'EU'
   name: string | null
   signal: Signal
   sector: string | null

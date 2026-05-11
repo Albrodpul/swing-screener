@@ -1,4 +1,4 @@
-"""Convert last_run.parquet → web/public/last_run.json for the Next.js frontend."""
+"""Merge last_run_us.parquet + last_run_eu.parquet → web/public/last_run.json."""
 from __future__ import annotations
 import json
 import math
@@ -15,7 +15,6 @@ from screener.plain_language import humanize_card
 
 
 def _safe(v):
-    """Convert numpy/pandas scalars to JSON-safe Python types."""
     if v is None:
         return None
     if isinstance(v, float) and math.isnan(v):
@@ -33,15 +32,32 @@ def _safe(v):
     return v
 
 
-def main() -> None:
-    parquet = ROOT / "data" / "last_run.parquet"
-    output  = ROOT / "web" / "public" / "last_run.json"
+def _load_parquet(path: Path) -> pd.DataFrame | None:
+    if not path.exists():
+        return None
+    try:
+        return pd.read_parquet(path)
+    except Exception as e:
+        print(f"[generate_json] Error leyendo {path}: {e}")
+        return None
 
-    if not parquet.exists():
-        print("[generate_json] No parquet found, skipping.")
+
+def main() -> None:
+    data_dir = ROOT / "data"
+    output   = ROOT / "web" / "public" / "last_run.json"
+
+    frames = []
+    for name in ("last_run_us.parquet", "last_run_eu.parquet"):
+        df = _load_parquet(data_dir / name)
+        if df is not None:
+            frames.append(df)
+            print(f"[generate_json] {name}: {len(df)} tickers")
+
+    if not frames:
+        print("[generate_json] No parquets found, skipping.")
         return
 
-    df = pd.read_parquet(parquet)
+    df = pd.concat(frames, ignore_index=True)
     stocks = []
 
     for _, row in df.iterrows():
@@ -54,6 +70,7 @@ def main() -> None:
 
         stocks.append({
             "ticker":         str(row["ticker"]),
+            "market":         str(row.get("market", "US")),
             "name":           _safe(row.get("name")),
             "signal":         str(row["signal"]),
             "sector":         _safe(row.get("sector")),
@@ -78,7 +95,9 @@ def main() -> None:
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    print(f"[generate_json] {len(stocks)} stocks → {output}")
+    us_n = sum(1 for s in stocks if s["market"] == "US")
+    eu_n = sum(1 for s in stocks if s["market"] == "EU")
+    print(f"[generate_json] {len(stocks)} stocks (US: {us_n}, EU: {eu_n}) → {output}")
 
 
 if __name__ == "__main__":
