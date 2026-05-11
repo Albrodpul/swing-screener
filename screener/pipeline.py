@@ -124,7 +124,8 @@ def run_pipeline(tickers: list[str] | None = None,
         sector = (funds.get(tk) or {}).get("sector")
         sector_etf = get_sector_etf(sector) if market == "US" else None
         sector_etf_prices = price_map.get(sector_etf) if sector_etf else None
-        exits = aggregate_exit(prices, spy, qqq, sector_etf_prices)
+        exits = aggregate_exit(prices, spy, qqq, sector_etf_prices,
+                               use_market_distribution=(market == "US"))
 
         f_score = int(f_df.loc[tk, "f_score"]) if tk in f_df.index else 0
         f_missing = bool(f_df.loc[tk, "f_missing"]) if tk in f_df.index else True

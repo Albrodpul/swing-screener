@@ -1,9 +1,6 @@
 name: Pipeline US
 
 on:
-  push:
-    branches:
-      - main
     paths:
       - 'screener/**'
       - 'data/**/*.py'

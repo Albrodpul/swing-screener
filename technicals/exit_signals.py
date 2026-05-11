@@ -143,9 +143,10 @@ def e6_sector_rotation_out(sector_etf_prices: pd.DataFrame, spy_prices: pd.DataF
 def aggregate_exit(prices: pd.DataFrame,
                    spy_prices: pd.DataFrame,
                    qqq_prices: pd.DataFrame,
-                   sector_etf_prices: pd.DataFrame | None) -> dict:
+                   sector_etf_prices: pd.DataFrame | None,
+                   use_market_distribution: bool = True) -> dict:
     """Aplica las 6 señales y devuelve resumen."""
-    e1 = e1_market_distribution(spy_prices, qqq_prices)
+    e1 = e1_market_distribution(spy_prices, qqq_prices) if use_market_distribution else {"active": False, "reason": None}
     e2 = e2_loss_sma50(prices)
     e3 = e3_chandelier_stop(prices)
     e4 = e4_blow_off(prices)

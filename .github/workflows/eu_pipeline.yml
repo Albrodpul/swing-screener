@@ -1,9 +1,6 @@
 name: Pipeline EU
 
 on:
-  push:
-    branches:
-      - main
     paths:
       - 'screener/**'
       - 'data/**/*.py'
