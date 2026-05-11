@@ -4,9 +4,16 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - 'data/portfolio.json'
-      - 'data/last_run_eu.parquet'
+    paths:
+      - 'screener/**'
+      - 'data/**/*.py'
+      - 'technicals/**'
+      - 'fundamentals/**'
+      - 'themes/**'
+      - 'ci_pipeline.py'
+      - 'generate_json.py'
+      - 'requirements.txt'
+      - 'config.yaml.example'
   schedule:
     # Lunes a viernes a las 21:30 UTC (tras cierre NYSE/NASDAQ)
     - cron: '30 21 * * 1-5'

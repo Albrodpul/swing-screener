@@ -1,6 +1,19 @@
 name: Pipeline EU
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'screener/**'
+      - 'data/**/*.py'
+      - 'technicals/**'
+      - 'fundamentals/**'
+      - 'themes/**'
+      - 'ci_pipeline.py'
+      - 'generate_json.py'
+      - 'requirements.txt'
+      - 'config.yaml.example'
   schedule:
     # Lunes a viernes a las 16:30 UTC (tras cierre Fráncfort/París)
     - cron: '30 16 * * 1-5'
