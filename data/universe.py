@@ -110,7 +110,8 @@ def get_sp600() -> list[str]:
 # ── EU indices ────────────────────────────────────────────────────────────────
 
 def _get_eu_index(url: str, cache_name: str, suffix: str,
-                  ticker_col_candidates: tuple, min_rows: int = 30) -> list[str]:
+                  ticker_col_candidates: tuple, min_rows: int = 30,
+                  suffix_already_included: bool = False) -> list[str]:
     cache_path = cache_dir() / cache_name
     if cache_path.exists() and (time.time() - cache_path.stat().st_mtime) < CACHE_TTL:
         return pd.read_parquet(cache_path)["ticker"].tolist()
@@ -131,8 +132,8 @@ def _get_eu_index(url: str, cache_name: str, suffix: str,
 
     chosen = chosen[[tcol]].rename(columns={tcol: "ticker"}).copy()
     chosen["ticker"] = chosen["ticker"].astype(str).str.strip()
-    # add exchange suffix and keep only valid-looking tickers
-    chosen["ticker"] = chosen["ticker"] + suffix
+    if not suffix_already_included:
+        chosen["ticker"] = chosen["ticker"] + suffix
     suffix_re = suffix.lstrip(".")
     chosen = chosen[chosen["ticker"].str.match(r'^[A-Z0-9]{1,6}\.' + suffix_re + r'$')]
     chosen.to_parquet(cache_path)
@@ -168,6 +169,7 @@ def get_ibex35() -> list[str]:
         WIKI_IBEX, "ibex35.parquet", ".MC",
         ticker_col_candidates=("Ticker", "Symbol", "Ticker symbol"),
         min_rows=30,
+        suffix_already_included=True,
     )
 
 
