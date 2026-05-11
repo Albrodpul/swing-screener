@@ -1,9 +1,10 @@
 'use client'
 import { useState, useMemo, useEffect } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Zap } from 'lucide-react'
 import type { ScreenerData } from '@/lib/types'
 import { StockCard } from './stock-card'
 import { SignalPills } from './signal-pills'
+import { LiveAnalysisPanel } from './live-analysis-panel'
 
 const SIG_MAP: Record<string, string[]> = {
   COMPRA:  ['COMPRA'],
@@ -28,6 +29,8 @@ export function DashboardClient({ data }: { data: ScreenerData | null }) {
   const [signal, setSignal] = useState('OBSERVAR')
   const [market, setMarket] = useState('ALL')
   const [search, setSearch] = useState('')
+  const [showLivePanel, setShowLivePanel] = useState(false)
+  const [liveTicker, setLiveTicker] = useState<{ ticker: string; market: 'US' | 'EU' } | null>(null)
 
   const counts = useMemo(() => {
     if (!data) return {}
@@ -77,16 +80,40 @@ export function DashboardClient({ data }: { data: ScreenerData | null }) {
     <div className="max-w-3xl mx-auto px-4 py-6">
 
       {/* Page header */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-black text-white mb-0.5">📈 Screener</h1>
-        {data ? (
-          <p className="text-sm text-slate-500">
-            Actualizado: {formatDate(data.updated_at)} · {data.count} empresas
-          </p>
-        ) : (
-          <p className="text-sm text-slate-500">Sin datos — pipeline no ejecutado aún</p>
-        )}
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-2xl font-black text-white mb-0.5">📈 Screener</h1>
+          {data ? (
+            <p className="text-sm text-slate-500">
+              Actualizado: {formatDate(data.updated_at)} · {data.count} empresas
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">Sin datos — pipeline no ejecutado aún</p>
+          )}
+        </div>
+        <button
+          onClick={() => { setLiveTicker(null); setShowLivePanel(v => !v) }}
+          className={[
+            'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-colors mt-0.5',
+            showLivePanel
+              ? 'bg-[#2d7eb5] text-white'
+              : 'bg-[#132033] border border-[#1e3a52] text-slate-400 hover:text-white hover:border-[#2d7eb5]',
+          ].join(' ')}
+        >
+          <Zap size={14} />
+          En vivo
+        </button>
       </div>
+
+      {/* Live analysis panel */}
+      {showLivePanel && (
+        <LiveAnalysisPanel
+          key={liveTicker ? `${liveTicker.ticker}-${liveTicker.market}` : 'manual'}
+          initialTicker={liveTicker?.ticker}
+          initialMarket={liveTicker?.market}
+          onClose={() => { setShowLivePanel(false); setLiveTicker(null) }}
+        />
+      )}
 
       {/* Market tabs */}
       <div className="flex gap-2 mb-4">
@@ -133,7 +160,15 @@ export function DashboardClient({ data }: { data: ScreenerData | null }) {
 
       {/* Cards */}
       {filtered.map(stock => (
-        <StockCard key={stock.ticker} stock={stock} />
+        <StockCard
+          key={stock.ticker}
+          stock={stock}
+          onAnalyze={() => {
+            setLiveTicker({ ticker: stock.ticker, market: stock.market })
+            setShowLivePanel(true)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
       ))}
 
       {filtered.length === 0 && data && (

@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Zap } from 'lucide-react'
 import type { StockData } from '@/lib/types'
 import { usePortfolio } from '@/hooks/use-portfolio'
 import { TradingViewChart } from './tradingview-chart'
@@ -30,9 +30,10 @@ function fuerzaColor(v: number | null): string {
 interface Props {
   stock: StockData
   alwaysShowChart?: boolean
+  onAnalyze?: () => void
 }
 
-export function StockCard({ stock, alwaysShowChart = false }: Props) {
+export function StockCard({ stock, alwaysShowChart = false, onAnalyze }: Props) {
   const [expanded, setExpanded] = useState(alwaysShowChart)
   const { holdings, addTicker, removeTicker } = usePortfolio()
   const inPortfolio = stock.ticker in holdings
@@ -114,6 +115,15 @@ export function StockCard({ stock, alwaysShowChart = false }: Props) {
             >
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               Análisis
+            </button>
+          )}
+          {onAnalyze && (
+            <button
+              onClick={onAnalyze}
+              title="Análisis en vivo con datos de hoy"
+              className="px-3 py-2 rounded-xl text-sm border border-[#1e3a52] text-slate-500 hover:text-[#2d7eb5] hover:border-[#2d7eb5] transition-colors flex items-center gap-1"
+            >
+              <Zap size={14} />
             </button>
           )}
         </div>

@@ -1,0 +1,69 @@
+name: Live Ticker Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: 'Ticker (ej: GLW, SAN.MC)'
+        required: true
+      market:
+        description: 'Mercado'
+        required: false
+        default: 'US'
+        type: choice
+        options:
+          - US
+          - EU
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Cache fundamentales
+        uses: actions/cache@v4
+        with:
+          path: cache/
+          key: screener-live-${{ github.run_id }}
+          restore-keys: |
+            screener-us-
+            screener-eu-
+            screener-live-
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Crear config.yaml
+        run: cp config.yaml.example config.yaml
+
+      - name: Analizar ticker
+        run: python live_analysis.py --ticker "${{ inputs.ticker }}" --market "${{ inputs.market }}"
+
+      - name: Commit resultado
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/live/
+          git diff --staged --quiet && echo "Sin cambios" || \
+            git commit -m "live: ${{ inputs.ticker }} $(date -u +%Y-%m-%dT%H:%M)" && \
+            git pull --rebase -X ours origin main && git push
