@@ -7,7 +7,7 @@ __pycache__/
 !data/last_run.parquet
 !data/last_run_us.parquet
 !data/last_run_eu.parquet
-data/live/
+data/live/*
 !data/live/*.json
 web/node_modules/
 web/.next/
