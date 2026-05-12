@@ -1,8 +1,10 @@
 'use client'
+import { useState } from 'react'
 import { Briefcase } from 'lucide-react'
 import type { ScreenerData } from '@/lib/types'
 import { usePortfolio } from '@/hooks/use-portfolio'
 import { StockCard } from './stock-card'
+import { LiveAnalysisPanel } from './live-analysis-panel'
 
 const SIG_COLOR: Record<string, string> = {
   COMPRA: '#10b981', OBSERVAR: '#f59e0b', SALIDA: '#ef4444',
@@ -22,13 +24,13 @@ interface Props {
 
 export function PortfolioClient({ screenerData }: Props) {
   const { holdings, isLoading } = usePortfolio()
-  const tickers = Object.keys(holdings).sort()
+  const [showLivePanel, setShowLivePanel] = useState(false)
+  const [liveTicker, setLiveTicker] = useState<{ ticker: string; market: 'US' | 'EU' } | null>(null)
 
-  // Match holdings against screener data
+  const tickers = Object.keys(holdings).sort()
   const known = tickers.filter(tk => screenerData?.stocks.some(s => s.ticker === tk))
   const missing = tickers.filter(tk => !screenerData?.stocks.some(s => s.ticker === tk))
 
-  // Signal summary chips
   const sigCounts: Record<string, number> = {}
   if (screenerData) {
     for (const tk of known) {
@@ -66,8 +68,7 @@ export function PortfolioClient({ screenerData }: Props) {
           <p className="text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
             Añade acciones desde el Dashboard pulsando
             <strong className="text-slate-400"> ＋ Añadir a mi cartera</strong>{' '}
-            en cada tarjeta, o usa el botón{' '}
-            <strong className="text-slate-400">+</strong> de abajo.
+            en cada tarjeta.
           </p>
         </div>
       )}
@@ -94,10 +95,30 @@ export function PortfolioClient({ screenerData }: Props) {
         </div>
       )}
 
+      {/* Live analysis panel */}
+      {showLivePanel && (
+        <LiveAnalysisPanel
+          key={liveTicker ? `${liveTicker.ticker}-${liveTicker.market}` : 'manual'}
+          initialTicker={liveTicker?.ticker}
+          initialMarket={liveTicker?.market}
+          onClose={() => { setShowLivePanel(false); setLiveTicker(null) }}
+        />
+      )}
+
       {/* Known holdings */}
       {known.map(tk => {
         const stock = screenerData!.stocks.find(s => s.ticker === tk)!
-        return <StockCard key={tk} stock={stock} alwaysShowChart={true} />
+        return (
+          <StockCard
+            key={tk}
+            stock={stock}
+            onAnalyze={() => {
+              setLiveTicker({ ticker: stock.ticker, market: stock.market })
+              setShowLivePanel(true)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+          />
+        )
       })}
 
       {/* Holdings not in screener data */}

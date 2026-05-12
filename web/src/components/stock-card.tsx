@@ -35,6 +35,7 @@ interface Props {
 
 export function StockCard({ stock, alwaysShowChart = false, onAnalyze }: Props) {
   const [expanded, setExpanded] = useState(alwaysShowChart)
+  const [showTech, setShowTech] = useState(alwaysShowChart)
   const { holdings, addTicker, removeTicker } = usePortfolio()
   const inPortfolio = stock.ticker in holdings
   const sigCol = SIG_COLOR[stock.signal] ?? '#6b7280'
@@ -48,104 +49,113 @@ export function StockCard({ stock, alwaysShowChart = false, onAnalyze }: Props) 
       {/* Signal color accent */}
       <div style={{ height: 4, background: sigCol }} />
 
-      <div className="p-4">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[1.1rem] font-black text-white tracking-tight">{stock.ticker}</span>
-              {inPortfolio && <span className="text-amber-400" title="En tu cartera">💼</span>}
-              <span
-                className="text-[0.72rem] font-bold px-2 py-0.5 rounded-full border"
-                style={{ background: `${sigCol}22`, borderColor: sigCol, color: sigCol }}
-              >
-                {SIG_LABEL[stock.signal]}
-              </span>
-            </div>
-            <span className="text-[0.82rem] text-slate-400 leading-tight block truncate">{stock.name}</span>
-            {sectorLine && <span className="text-[0.75rem] text-slate-500 block">{sectorLine}</span>}
-            {price && <span className="text-[0.75rem] text-slate-600">{price}</span>}
+      {/* Summary row — always visible, click to expand */}
+      <button
+        className="w-full text-left px-4 pt-3.5 pb-3 flex items-start justify-between gap-3"
+        onClick={() => setExpanded(v => !v)}
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[1.1rem] font-black text-white tracking-tight">{stock.ticker}</span>
+            {inPortfolio && <span className="text-amber-400" title="En tu cartera">💼</span>}
+            <span
+              className="text-[0.72rem] font-bold px-2 py-0.5 rounded-full border"
+              style={{ background: `${sigCol}22`, borderColor: sigCol, color: sigCol }}
+            >
+              {SIG_LABEL[stock.signal]}
+            </span>
           </div>
-          <div className="text-right flex-shrink-0 leading-tight">
+          <span className="text-[0.82rem] text-slate-400 leading-tight block truncate">{stock.name}</span>
+          {sectorLine && <span className="text-[0.75rem] text-slate-500 block">{sectorLine}</span>}
+          {price && <span className="text-[0.75rem] text-slate-600">{price}</span>}
+        </div>
+        <div className="flex items-start gap-2 flex-shrink-0">
+          <div className="text-right leading-tight">
             <div className="text-[0.62rem] text-slate-500 mb-0.5">Fuerza</div>
             <span className="text-[1.6rem] font-black leading-none" style={{ color: fCol }}>
               {stock.fuerza == null ? '—' : Math.round(stock.fuerza)}
             </span>
             <span className="text-[0.72rem] text-slate-500">/100</span>
           </div>
+          <span className="text-slate-600 mt-1">
+            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </span>
         </div>
+      </button>
 
-        {/* Company description */}
-        {stock.description && (
-          <p className="text-[0.78rem] text-slate-400 leading-relaxed mt-2 mb-1 italic">{stock.description}</p>
-        )}
-
-        {/* Explanation */}
-        <p className="text-sm text-slate-300 leading-relaxed my-3">{stock.explicacion}</p>
-
-        {/* Progress bars */}
-        {stock.fuerza != null && (
-          <Bar label={`RS: mejor que el ${Math.round(stock.fuerza)}% del mercado`} value={stock.fuerza} />
-        )}
-        {stock.fund_composite != null && (
-          <Bar label={`Salud empresa: ${Math.round(stock.fund_composite)}/100`} value={stock.fund_composite} />
-        )}
-
-        {/* Action row */}
-        <div className="flex gap-2 mt-3">
-          {inPortfolio ? (
-            <button
-              onClick={() => removeTicker(stock.ticker)}
-              className="flex-1 py-2 rounded-xl text-sm font-bold bg-[#2d7eb5] text-white hover:bg-[#3a8fc7] transition-colors"
-            >
-              ✕  Quitar de mi cartera
-            </button>
-          ) : (
-            <button
-              onClick={() => addTicker(stock.ticker)}
-              className="flex-1 py-2 rounded-xl text-sm font-bold border border-[#1e3a52] text-slate-400 hover:border-[#2d7eb5] hover:text-white transition-colors"
-            >
-              ＋  Añadir a mi cartera
-            </button>
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-4 pb-4">
+          {/* Description */}
+          {stock.description && (
+            <p className="text-[0.78rem] text-slate-400 leading-relaxed mb-2 italic">{stock.description}</p>
           )}
-          {!alwaysShowChart && (
+
+          {/* Explanation */}
+          <p className="text-sm text-slate-300 leading-relaxed mb-3">{stock.explicacion}</p>
+
+          {/* Progress bars */}
+          {stock.fuerza != null && (
+            <Bar label={`RS: mejor que el ${Math.round(stock.fuerza)}% del mercado`} value={stock.fuerza} />
+          )}
+          {stock.fund_composite != null && (
+            <Bar label={`Salud empresa: ${Math.round(stock.fund_composite)}/100`} value={stock.fund_composite} />
+          )}
+
+          {/* Action row */}
+          <div className="flex gap-2 mt-3">
+            {inPortfolio ? (
+              <button
+                onClick={e => { e.stopPropagation(); removeTicker(stock.ticker) }}
+                className="flex-1 py-2 rounded-xl text-sm font-bold bg-[#2d7eb5] text-white hover:bg-[#3a8fc7] transition-colors"
+              >
+                ✕  Quitar de mi cartera
+              </button>
+            ) : (
+              <button
+                onClick={e => { e.stopPropagation(); addTicker(stock.ticker) }}
+                className="flex-1 py-2 rounded-xl text-sm font-bold border border-[#1e3a52] text-slate-400 hover:border-[#2d7eb5] hover:text-white transition-colors"
+              >
+                ＋  Añadir a mi cartera
+              </button>
+            )}
             <button
-              onClick={() => setExpanded(!expanded)}
+              onClick={e => { e.stopPropagation(); setShowTech(v => !v) }}
               className="px-3 py-2 rounded-xl text-sm border border-[#1e3a52] text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1"
             >
-              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {showTech ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               Análisis
             </button>
-          )}
-          {onAnalyze && (
-            <button
-              onClick={onAnalyze}
-              title="Análisis en vivo con datos de hoy"
-              className="px-3 py-2 rounded-xl text-sm border border-[#1e3a52] text-slate-500 hover:text-[#2d7eb5] hover:border-[#2d7eb5] transition-colors flex items-center gap-1"
-            >
-              <Zap size={14} />
-            </button>
+            {onAnalyze && (
+              <button
+                onClick={e => { e.stopPropagation(); onAnalyze() }}
+                title="Análisis en vivo con datos de hoy"
+                className="px-3 py-2 rounded-xl text-sm border border-[#1e3a52] text-slate-500 hover:text-[#2d7eb5] hover:border-[#2d7eb5] transition-colors flex items-center gap-1"
+              >
+                <Zap size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Technical detail + chart */}
+          {showTech && (
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-4 gap-2">
+                <Chip label="RS" value={stock.rs_rating != null ? Math.round(stock.rs_rating).toString() : '—'} />
+                <Chip label="Stage 2" value={stock.trend_template ? '✅' : '❌'} />
+                <Chip label="Breakout" value={stock.breakout ? '✅' : '❌'} />
+                <Chip label="Piotroski" value={stock.f_score != null ? `${stock.f_score}/9` : '—'} />
+              </div>
+              {stock.entry_reasons.length > 0 && <Reasons label="A favor" items={stock.entry_reasons} />}
+              {stock.entry_blockers.length > 0 && <Reasons label="Bloqueadores" items={stock.entry_blockers} />}
+              {stock.exit_reasons.length > 0 && <Reasons label="Avisos de salida" items={stock.exit_reasons} />}
+              <div className="rounded-xl overflow-hidden mt-2">
+                <TradingViewChart ticker={stock.ticker} />
+              </div>
+            </div>
           )}
         </div>
-
-        {/* Expanded: technical detail + chart */}
-        {(expanded || alwaysShowChart) && (
-          <div className="mt-4 space-y-3">
-            <div className="grid grid-cols-4 gap-2">
-              <Chip label="RS" value={stock.rs_rating != null ? Math.round(stock.rs_rating).toString() : '—'} />
-              <Chip label="Stage 2" value={stock.trend_template ? '✅' : '❌'} />
-              <Chip label="Breakout" value={stock.breakout ? '✅' : '❌'} />
-              <Chip label="Piotroski" value={stock.f_score != null ? `${stock.f_score}/9` : '—'} />
-            </div>
-            {stock.entry_reasons.length > 0 && <Reasons label="A favor" items={stock.entry_reasons} />}
-            {stock.entry_blockers.length > 0 && <Reasons label="Bloqueadores" items={stock.entry_blockers} />}
-            {stock.exit_reasons.length > 0 && <Reasons label="Avisos de salida" items={stock.exit_reasons} />}
-            <div className="rounded-xl overflow-hidden mt-2">
-              <TradingViewChart ticker={stock.ticker} />
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   )
 }
