@@ -44,6 +44,8 @@ def decide_signal(*, trend: dict, breakout: dict, rs: dict, rs_line: dict,
         entry_reasons.append(f"Fuerza relativa alta (RS {rs.get('rs_rating'):.0f}/100)")
     if rs_line.get("rs_line_at_high"):
         entry_reasons.append("Línea de fuerza relativa en máximos")
+    if rs_line.get("rs_slope_improving"):
+        entry_reasons.append("Fuerza relativa mejorando últimas 4 semanas")
     if breakout.get("breakout") and breakout.get("volume_ok"):
         vr = breakout.get("volume_ratio") or 0
         entry_reasons.append(f"Breakout sobre pivot con volumen {vr:.1f}× lo normal")

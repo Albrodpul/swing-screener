@@ -51,12 +51,17 @@ def rs_line(close: pd.Series, bench_close: pd.Series) -> pd.Series:
 def rs_line_state(close: pd.Series, bench_close: pd.Series, lookback: int = 50) -> dict:
     rl = rs_line(close, bench_close).dropna()
     if len(rl) < lookback:
-        return {"rs_line_at_high": False, "rs_line_above_sma50": False}
+        return {"rs_line_at_high": False, "rs_line_above_sma50": False, "rs_slope_improving": False}
     last = rl.iloc[-1]
     recent_max = rl.tail(lookback).max()
     sma50 = rl.tail(lookback).mean()
+    # RS mejorando: media de las últimas 4 semanas > media de las 4 semanas previas
+    rs_slope_improving = False
+    if len(rl) >= 40:
+        rs_slope_improving = bool(float(rl.iloc[-20:].mean()) > float(rl.iloc[-40:-20].mean()))
     return {
         "rs_line_at_high": bool(last >= recent_max * 0.99),
         "rs_line_above_sma50": bool(last > sma50),
         "rs_line_value": float(last),
+        "rs_slope_improving": rs_slope_improving,
     }

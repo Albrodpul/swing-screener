@@ -176,24 +176,23 @@ def _fmp_fundamentals(ticker: str) -> dict:
             })
     except Exception:
         pass
-    # series trimestrales — free tier limita a 5 últimos
+    # series trimestrales — pedimos 12 (3 años) para aceleración YoY robusta
     for ep, key in [
         ("income-statement", "quarterly_income"),
         ("cash-flow-statement", "quarterly_cashflow"),
         ("balance-sheet-statement", "quarterly_balance"),
     ]:
         try:
-            data = _fmp_get(ep, symbol=ticker, params={"period": "quarter", "limit": 5})
+            data = _fmp_get(ep, symbol=ticker, params={"period": "quarter", "limit": 12})
             out[key] = data if isinstance(data, list) else []
         except Exception:
             out[key] = []
     try:
-        out["analyst_estimates"] = _fmp_get("analyst-estimates", symbol=ticker, params={"limit": 4, "period": "annual"})
+        out["analyst_estimates"] = _fmp_get("analyst-estimates", symbol=ticker, params={"limit": 8, "period": "annual"})
     except Exception:
         out["analyst_estimates"] = []
     try:
-        # /stable/earnings reemplaza al legacy earnings-surprises (free tier max 5)
-        out["earnings_surprises"] = _fmp_get("earnings", symbol=ticker, params={"limit": 5})
+        out["earnings_surprises"] = _fmp_get("earnings", symbol=ticker, params={"limit": 12})
     except Exception:
         out["earnings_surprises"] = []
     return out
@@ -229,18 +228,33 @@ def get_fundamentals(ticker: str, mode: str = "auto",
             data = _fmp_fundamentals(ticker)
         except Exception as e:
             data = {"source": "fmp_failed", "error": str(e)}
-    if not data or "sector" not in data or data.get("source", "").endswith("failed"):
-        # respaldo siempre
-        try:
-            yf_data = _yfinance_fundamentals(ticker)
-            # merge: lo que falte en data se rellena con yfinance
-            for k, v in yf_data.items():
-                if k not in data or data.get(k) in (None, "", []):
-                    data[k] = v
-            if "source" not in data:
-                data["source"] = "yfinance"
-        except Exception:
-            pass
+    # Siempre consultar yfinance como complemento
+    try:
+        yf_data = _yfinance_fundamentals(ticker)
+        # Campos básicos: rellenar solo si FMP no los tiene
+        for k, v in yf_data.items():
+            if k not in data or data.get(k) in (None, "", []):
+                data[k] = v
+        # Series trimestrales: usar yfinance si FMP devolvió menos de 8 trimestres
+        # (garantiza historial suficiente para aceleración YoY robusta)
+        for fmp_key, yf_key in [
+            ("quarterly_income",   "quarterly_income"),
+            ("quarterly_cashflow", "quarterly_cashflow"),
+            ("quarterly_balance",  "quarterly_balance"),
+        ]:
+            fmp_series = data.get(fmp_key)
+            yf_series  = yf_data.get(yf_key)
+            fmp_len = len(fmp_series) if isinstance(fmp_series, list) else 0
+            yf_len  = len(yf_series)  if isinstance(yf_series,  dict) else 0
+            if yf_len > fmp_len:
+                data[fmp_key] = yf_series
+        # earnings_surprises: si FMP da menos de 8 usar yfinance earnings_history
+        if len(data.get("earnings_surprises") or []) < 8 and yf_data.get("earnings_history"):
+            data.setdefault("earnings_history", yf_data["earnings_history"])
+        if "source" not in data:
+            data["source"] = "yfinance"
+    except Exception:
+        pass
 
     try:
         with path.open("w", encoding="utf-8") as f:

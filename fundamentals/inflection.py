@@ -75,6 +75,32 @@ def _fcf_series(fund: dict) -> list[float]:
     return yfinance_series(fund.get("quarterly_cashflow"), "Free Cash Flow")
 
 
+def _eps_acceleration(fund: dict) -> int:
+    """Detecta aceleración real de EPS: últimos 3 trimestres reportados
+    todos positivos y cada uno mayor que el anterior (tipo Nvidia/Micron recovery).
+    Retorna -1 si pérdidas crecientes, 0 si ambiguo, +1 si aceleración real.
+    """
+    surprises = fund.get("earnings_surprises") or []
+    if not isinstance(surprises, list):
+        return 0
+    reported = sorted(
+        [s for s in surprises if s.get("epsActual") is not None],
+        key=lambda s: s.get("date", "")
+    )
+    eps_vals = [safe_num(s.get("epsActual")) for s in reported]
+    eps_vals = [v for v in eps_vals if v is not None]
+    if len(eps_vals) < 3:
+        return 0
+    last3 = eps_vals[-3:]
+    # 3 trimestres positivos y cada uno mayor al anterior → aceleración real
+    if all(v > 0 for v in last3) and last3[-1] > last3[-2] > last3[-3]:
+        return 1
+    # Pérdidas crecientes
+    if all(v < 0 for v in last3) and last3[-1] < last3[-2]:
+        return -1
+    return 0
+
+
 def _earnings_surprise_signal(fund: dict) -> int:
     surprises = fund.get("earnings_surprises") or []
     # Para FMP es lista de dicts. Para yfinance es earnings_history dict.
@@ -160,20 +186,23 @@ def compute_fi_score(fund: dict) -> dict:
     elif surp < 0:
         flags.append("Miss consistente últimos 2 trimestres")
 
-    # 3. Aceleración revenue
+    # 3. Aceleración revenue (requiere crecimiento meaningful >5% y acelerando)
     revenues = _revenues(fund)
     if len(revenues) >= 6:
-        cur_yoy = _yoy_growth(revenues[-5:] + [revenues[-1]] if len(revenues) >= 5 else revenues)
-        # forma simple: yoy último vs yoy anterior
         try:
             yoy_now = revenues[-1] / revenues[-5] - 1
             yoy_prev = revenues[-2] / revenues[-6] - 1
-            if yoy_now > 0 and yoy_now > yoy_prev:
+            # Aceleración real: creciendo >5% YoY Y acelerando vs trimestre anterior
+            if yoy_now > 0.05 and yoy_now > yoy_prev:
                 signals["revenue_accel"] = 1
                 flags.append(f"Ingresos acelerando ({yoy_now*100:.0f}% YoY vs {yoy_prev*100:.0f}% trimestre anterior)")
+            # Alto crecimiento aunque no acelere (>20% YoY sostenido)
+            elif yoy_now > 0.20:
+                signals["revenue_accel"] = 1
+                flags.append(f"Ingresos en alto crecimiento ({yoy_now*100:.0f}% YoY)")
             elif yoy_now < yoy_prev and yoy_now < 0:
                 signals["revenue_accel"] = -1
-                flags.append("Ingresos desacelerando")
+                flags.append("Ingresos desacelerando en negativo")
             else:
                 signals["revenue_accel"] = 0
         except Exception:
@@ -216,10 +245,16 @@ def compute_fi_score(fund: dict) -> dict:
     else:
         signals["fcf"] = 0
 
-    # 6. Guidance proxy: ya cubierto por revisions; no añadimos otro independiente.
+    # 6. Aceleración de EPS (3 trimestres consecutivos creciendo = superperformer pattern)
+    eps_accel = _eps_acceleration(fund)
+    signals["eps_accel"] = eps_accel
+    if eps_accel > 0:
+        flags.append("EPS acelerando 3 trimestres consecutivos (patrón superperformer)")
+    elif eps_accel < 0:
+        flags.append("Pérdidas crecientes")
 
-    raw = sum(signals.values())  # rango -5..+5 aprox
-    fi_score = max(-100.0, min(100.0, raw / 5.0 * 100.0))
+    raw = sum(signals.values())  # rango -6..+6
+    fi_score = max(-100.0, min(100.0, raw / 6.0 * 100.0))
     return {
         "fi_score": float(fi_score),
         "signals": signals,

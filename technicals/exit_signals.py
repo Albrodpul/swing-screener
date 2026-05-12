@@ -38,8 +38,8 @@ def e1_market_distribution(spy_prices: pd.DataFrame, qqq_prices: pd.DataFrame,
     }
 
 
-# E2 — Pérdida de SMA50 con volumen
-def e2_loss_sma50(prices: pd.DataFrame) -> dict:
+# E2 — Pérdida de SMA50 con volumen (requiere 3 cierres consecutivos + volumen 1.5×)
+def e2_loss_sma50(prices: pd.DataFrame, consecutive: int = 3) -> dict:
     if prices is None or len(prices) < 60:
         return {"active": False, "reason": None}
     close = prices["close"]
@@ -52,12 +52,15 @@ def e2_loss_sma50(prices: pd.DataFrame) -> dict:
     avg_vol = float(vol_avg.iloc[-1]) if vol_avg.iloc[-1] == vol_avg.iloc[-1] else None
     if last_sma50 is None or avg_vol is None:
         return {"active": False, "reason": None}
-    active = bool(last_close < last_sma50 and last_vol > 1.2 * avg_vol)
+    # 3 cierres consecutivos bajo SMA50 evita falsas salidas por días malos puntuales
+    below_streak = bool((close.iloc[-consecutive:].values < sma50.iloc[-consecutive:].values).all())
+    high_vol = bool(last_vol > 1.5 * avg_vol)
+    active = bool(below_streak and high_vol)
     return {
         "active": active,
         "last_close": last_close,
         "sma50": last_sma50,
-        "reason": f"Cierre por debajo de SMA50 ({last_close:.2f} < {last_sma50:.2f}) con volumen {last_vol/avg_vol:.1f}x" if active else None,
+        "reason": f"Pérdida de SMA50 confirmada: {consecutive} cierres consecutivos ({last_close:.2f} < {last_sma50:.2f}) con volumen {last_vol/avg_vol:.1f}×" if active else None,
     }
 
 
@@ -140,6 +143,28 @@ def e6_sector_rotation_out(sector_etf_prices: pd.DataFrame, spy_prices: pd.DataF
     return base
 
 
+# E7 — Presión de distribución sostenida (volumen vendedor domina 13 semanas)
+def e7_distribution_pressure(prices: pd.DataFrame, window: int = 65) -> dict:
+    """Compara volumen total en días alcistas vs bajistas últimas 13 semanas.
+    Ratio <0.75 (mucho más volumen vendedor que comprador) indica distribución institucional.
+    """
+    if prices is None or len(prices) < window + 1:
+        return {"active": False, "reason": None}
+    df = prices.iloc[-(window + 1):].copy()
+    df = df.assign(prev_close=df["close"].shift(1)).dropna()
+    up_vol   = float(df.loc[df["close"] > df["prev_close"], "volume"].sum())
+    down_vol = float(df.loc[df["close"] < df["prev_close"], "volume"].sum())
+    if up_vol + down_vol == 0:
+        return {"active": False, "reason": None}
+    ratio = up_vol / (down_vol + 1)
+    active = bool(ratio < 0.75)
+    return {
+        "active": active,
+        "acc_dist_ratio": ratio,
+        "reason": f"Distribución institucional: ratio compra/venta {ratio:.2f} en últimas {window // 5} semanas" if active else None,
+    }
+
+
 def aggregate_exit(prices: pd.DataFrame,
                    spy_prices: pd.DataFrame,
                    qqq_prices: pd.DataFrame,
@@ -155,8 +180,14 @@ def aggregate_exit(prices: pd.DataFrame,
         e6 = e6_sector_rotation_out(sector_etf_prices, spy_prices)
     else:
         e6 = {"active": False, "reason": None}
-    any_active = any(s.get("active") for s in (e1, e2, e3, e4, e5, e6))
-    reasons = [s.get("reason") for s in (e1, e2, e3, e4, e5, e6) if s.get("active") and s.get("reason")]
+    e7 = e7_distribution_pressure(prices)
+    # E1 (distribución de mercado) basta sola — es señal global, no de un ticker.
+    # Para señales individuales (E2-E7) se requieren 2+ activas simultáneamente
+    # para evitar falsas salidas por días malos puntuales en mercados volátiles.
+    stock_signals = [e2, e3, e4, e5, e6, e7]
+    stock_active_count = sum(1 for s in stock_signals if s.get("active"))
+    any_active = bool(e1.get("active") or stock_active_count >= 2)
+    reasons = [s.get("reason") for s in (e1, e2, e3, e4, e5, e6, e7) if s.get("active") and s.get("reason")]
     return {
         "any_active": any_active,
         "E1": e1,
@@ -165,5 +196,6 @@ def aggregate_exit(prices: pd.DataFrame,
         "E4": e4,
         "E5": e5,
         "E6": e6,
+        "E7": e7,
         "reasons": reasons,
     }
