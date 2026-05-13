@@ -11,6 +11,7 @@ Fuentes EU:
 """
 from __future__ import annotations
 import io
+import json
 import time
 from pathlib import Path
 
@@ -175,7 +176,18 @@ def get_ibex35() -> list[str]:
 
 # ── Universe builders ─────────────────────────────────────────────────────────
 
-def _build_from_cfg(cfg_section: dict) -> list[str]:
+def _load_custom_tickers(market: str) -> list[str]:
+    p = Path(__file__).parent / "custom_tickers.json"
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        return data.get(market, []) or []
+    except Exception:
+        return []
+
+
+def _build_from_cfg(cfg_section: dict, market: str = "us") -> list[str]:
     tickers: set[str] = set()
     for src in cfg_section.get("include", []):
         fn = {
@@ -186,6 +198,7 @@ def _build_from_cfg(cfg_section: dict) -> list[str]:
         if fn:
             tickers.update(fn())
     tickers.update(cfg_section.get("extra", []) or [])
+    tickers.update(_load_custom_tickers(market))
     for x in cfg_section.get("exclude", []) or []:
         tickers.discard(x)
     return sorted(tickers)
@@ -195,14 +208,14 @@ def build_universe() -> list[str]:
     """US universe. Reads from universe.us (new config) or universe (legacy flat)."""
     cfg = load_config()
     u = cfg.get("universe", {})
-    return _build_from_cfg(u.get("us", u))
+    return _build_from_cfg(u.get("us", u), market="us")
 
 
 def build_eu_universe() -> list[str]:
     """EU universe. Reads from universe.eu."""
     cfg = load_config()
     eu = cfg.get("universe", {}).get("eu", {})
-    return _build_from_cfg(eu)
+    return _build_from_cfg(eu, market="eu")
 
 
 def get_names_map() -> dict[str, str]:

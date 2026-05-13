@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import type { StockData } from '@/lib/types'
+import { addToCustomTickers } from '@/lib/custom-tickers'
 
 const GH_PAT  = process.env.GH_PAT  ?? ''
 const GH_REPO = process.env.GH_REPO ?? ''
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
     const txt = await r.text()
     return Response.json({ error: txt }, { status: r.status })
   }
+
+  // Fire-and-forget: add to custom universe for future pipeline runs
+  addToCustomTickers(t, market as 'US' | 'EU').catch(() => null)
 
   return Response.json({ dispatched_at, ticker: t })
 }
