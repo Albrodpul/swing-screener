@@ -1,7 +1,7 @@
 import { fetchScreenerData } from '@/lib/data'
 import { PortfolioClient } from '@/components/portfolio-client'
 
-export default function PortfolioPage() {
-  const data = fetchScreenerData()
+export default async function PortfolioPage() {
+  const data = await fetchScreenerData()
   return <PortfolioClient screenerData={data} />
 }
