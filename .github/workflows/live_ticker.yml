@@ -66,4 +66,8 @@ jobs:
           git add data/live/
           git diff --staged --quiet && echo "Sin cambios" || \
             git commit -m "live: ${{ inputs.ticker }} $(date -u +%Y-%m-%dT%H:%M)" && \
-            git pull --rebase -X ours origin main && git push
+            for i in 1 2 3; do
+              git pull --rebase -X ours origin main && git push && break
+              echo "Push failed (attempt $i), retrying in 5s..."
+              sleep 5
+            done
