@@ -17,23 +17,36 @@ from .indicators import sma, ema, atr, rsi, rolling_max
 def e1_market_distribution(spy_prices: pd.DataFrame, qqq_prices: pd.DataFrame,
                             window: int = 25, threshold: int = 5) -> dict:
     """Cuenta días de distribución (cierre <-0.2% con volumen > día anterior)
-    en SPY+QQQ últimos `window` días. Un día de follow-through (cierre +1.7%
-    con volumen alto) resetea el contador: el mercado absorbió la presión.
+    en SPY+QQQ últimos `window` días. Resets:
+    - Follow-through day (cierre +1.0% con volumen > día anterior)
+    - Nuevo máximo histórico tocado dentro de la ventana
+    Si índice cierra a <1% de su máximo de 50 días, distribución pasada está
+    absorbida por definición — no marca señal.
     """
     def _dd_count(df: pd.DataFrame) -> int:
         if df is None or len(df) < window + 1:
             return 0
+        # Gate: si índice está pegado a máximo de 50d, contador es ruido
+        recent = df["close"].iloc[-50:] if len(df) >= 50 else df["close"]
+        if len(recent) >= 10:
+            last_close = float(df["close"].iloc[-1])
+            high_50 = float(recent.max())
+            if last_close >= high_50 * 0.99:
+                return 0
         c = df["close"].iloc[-(window + 1):]
         v = df["volume"].iloc[-(window + 1):]
         ret = c.pct_change()
         dd = (ret < -0.002) & (v.diff() > 0)
-        ft = (ret > 0.017) & (v.diff() > 0)
+        ft = (ret > 0.010) & (v.diff() > 0)
+        # Reset también si nuevo máximo de la ventana tocado
+        rolling_high = c.cummax()
+        new_high = c == rolling_high
         dd_window = dd.iloc[1:]
-        ft_window = ft.iloc[1:]
-        ft_dates = ft_window[ft_window].index
-        if len(ft_dates) > 0:
-            last_ft = ft_dates.max()
-            dd_window = dd_window.loc[dd_window.index > last_ft]
+        reset_days = (ft.iloc[1:] | new_high.iloc[1:])
+        reset_dates = reset_days[reset_days].index
+        if len(reset_dates) > 0:
+            last_reset = reset_dates.max()
+            dd_window = dd_window.loc[dd_window.index > last_reset]
         return int(dd_window.sum())
     spy_dd = _dd_count(spy_prices)
     qqq_dd = _dd_count(qqq_prices)
