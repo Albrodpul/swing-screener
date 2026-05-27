@@ -17,7 +17,8 @@ from .indicators import sma, ema, atr, rsi, rolling_max
 def e1_market_distribution(spy_prices: pd.DataFrame, qqq_prices: pd.DataFrame,
                             window: int = 25, threshold: int = 5) -> dict:
     """Cuenta días de distribución (cierre <-0.2% con volumen > día anterior)
-    en SPY+QQQ últimos `window` días. Si supera threshold, mercado en distribución.
+    en SPY+QQQ últimos `window` días. Un día de follow-through (cierre +1.7%
+    con volumen alto) resetea el contador: el mercado absorbió la presión.
     """
     def _dd_count(df: pd.DataFrame) -> int:
         if df is None or len(df) < window + 1:
@@ -26,7 +27,14 @@ def e1_market_distribution(spy_prices: pd.DataFrame, qqq_prices: pd.DataFrame,
         v = df["volume"].iloc[-(window + 1):]
         ret = c.pct_change()
         dd = (ret < -0.002) & (v.diff() > 0)
-        return int(dd.iloc[1:].sum())
+        ft = (ret > 0.017) & (v.diff() > 0)
+        dd_window = dd.iloc[1:]
+        ft_window = ft.iloc[1:]
+        ft_dates = ft_window[ft_window].index
+        if len(ft_dates) > 0:
+            last_ft = ft_dates.max()
+            dd_window = dd_window.loc[dd_window.index > last_ft]
+        return int(dd_window.sum())
     spy_dd = _dd_count(spy_prices)
     qqq_dd = _dd_count(qqq_prices)
     total = max(spy_dd, qqq_dd)
@@ -34,7 +42,7 @@ def e1_market_distribution(spy_prices: pd.DataFrame, qqq_prices: pd.DataFrame,
         "active": total >= threshold,
         "spy_dd": spy_dd,
         "qqq_dd": qqq_dd,
-        "reason": f"Mercado en distribución: {total} días bajistas con volumen alto en últimas {window} sesiones" if total >= threshold else None,
+        "reason": f"Mercado en distribución: {total} días bajistas con volumen alto tras último rally de confirmación" if total >= threshold else None,
     }
 
 
